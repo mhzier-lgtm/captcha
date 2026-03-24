@@ -232,6 +232,7 @@
       border-radius: 4px; overflow: hidden;
       position: relative;
       background: var(--offwhite);
+      cursor: none;
     }
 
     /* ── CAPTCHA UI ── */
@@ -542,11 +543,48 @@
       position: absolute; top:33%; left:33%; width:34%; height:34%;
       background: #e8809a; border-radius: 3px;
     }
-    .dpad-arrow { position:absolute; width:0; height:0; border:5px solid transparent; }
+    .dpad-arrow { position:absolute; width:0; height:0; border:5px solid transparent; cursor:pointer; transition: filter 0.1s; }
     .dpad-up    { border-bottom-color:rgba(255,255,255,0.25); top:6px;    left:50%;  transform:translateX(-50%); }
     .dpad-down  { border-top-color:rgba(255,255,255,0.25);    bottom:6px; left:50%;  transform:translateX(-50%); }
-    .dpad-left  { border-right-color:rgba(255,255,255,0.25);  left:6px;   top:50%;   transform:translateY(-50%); }
-    .dpad-right { border-left-color:rgba(255,255,255,0.25);   right:6px;  top:50%;   transform:translateY(-50%); }
+    .dpad-left  { border-right-color:rgba(255,255,255,0.4);   left:6px;   top:50%;   transform:translateY(-50%); }
+    .dpad-right { border-left-color:rgba(255,255,255,0.4);    right:6px;  top:50%;   transform:translateY(-50%); }
+    .dpad-left:hover  { filter: brightness(2); }
+    .dpad-right:hover { filter: brightness(2); }
+    .dpad-left.pressed, .dpad-right.pressed { filter: brightness(3); }
+
+    /* DS Stylus cursor */
+    #stylusCursor {
+      position: absolute;
+      width: 10px;
+      height: 48px;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      transform: rotate(-30deg);
+      transform-origin: top left;
+    }
+    #stylusCursor::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 10px solid #d4607e;
+    }
+    #stylusCursor::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 38px;
+      background: linear-gradient(to bottom, #feeaf1 0%, #f4a0b8 40%, #e8809a 80%, #d4607e 100%);
+      border-radius: 4px 4px 2px 2px;
+      border: 1px solid #c96080;
+      box-shadow: inset 1px 0 2px rgba(255,255,255,0.5);
+    }
 
     /* CENTER — select/start + speaker */
     .ds-center {
@@ -695,6 +733,7 @@
 
     <div class="ds-bottom-screen-bezel">
       <div class="ds-bottom-screen">
+        <div id="stylusCursor"></div>
         <div class="screen-ui">
 
           <!-- CHALLENGE -->
@@ -747,8 +786,8 @@
         <div class="dpad-center"></div>
         <div class="dpad-arrow dpad-up"></div>
         <div class="dpad-arrow dpad-down"></div>
-        <div class="dpad-arrow dpad-left"></div>
-        <div class="dpad-arrow dpad-right"></div>
+        <div class="dpad-arrow dpad-left" id="dpadLeft" onclick="dpadNav(-1)"></div>
+        <div class="dpad-arrow dpad-right" id="dpadRight" onclick="dpadNav(1)"></div>
       </div>
       <div class="ds-center">
         <div class="ds-small-btns">
@@ -1012,6 +1051,46 @@
     document.getElementById('dsClosedOverlay').classList.remove('show');
     sliderDone=false; resetSlider();
     buildGrid();
+  }
+
+  // ── STYLUS CURSOR ──
+  (function() {
+    const screen = document.querySelector('.ds-bottom-screen');
+    const stylus = document.getElementById('stylusCursor');
+    if (!screen || !stylus) return;
+
+    screen.addEventListener('mousemove', function(e) {
+      const rect = screen.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      stylus.style.left = (x - 4) + 'px';
+      stylus.style.top = (y - 4) + 'px';
+    });
+    screen.addEventListener('mouseenter', function() {
+      stylus.style.display = 'block';
+    });
+    screen.addEventListener('mouseleave', function() {
+      stylus.style.display = 'none';
+    });
+  })();
+
+  // ── DPAD NAVIGATION ──
+  function dpadNav(dir) {
+    if (sliderDone) return;
+    const btn = dir === -1 ? document.getElementById('dpadLeft') : document.getElementById('dpadRight');
+    if (btn) {
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 150);
+    }
+    if (!currentImages || currentImages.length === 0) return;
+    const currentIndex = currentImages.findIndex(img => img.id === selectedId);
+    let nextIndex;
+    if (currentIndex === -1) {
+      nextIndex = dir === 1 ? 0 : currentImages.length - 1;
+    } else {
+      nextIndex = (currentIndex + dir + currentImages.length) % currentImages.length;
+    }
+    selectTile(currentImages[nextIndex].id);
   }
 
   buildGrid();
